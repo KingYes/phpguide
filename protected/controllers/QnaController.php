@@ -15,6 +15,60 @@ class QnaController extends Controller
 	 */
 	const QNAS_ON_PAGE = 30;
     
+	
+	/**
+	 * Amount of points given for a correct answer
+	 * @var int
+	 */
+	const POINTS_FOR_CORRECT_ANSWER = 10;
+	
+	
+	/**
+	 * Used to mark an answer as the correct answer to a question
+	 * @param int $ans answer's id
+	 */
+	public function actionMarkascorrect($ans){
+		
+		if(Yii::app()->user->isGuest) 
+			return;
+		
+		$answerId = intval($ans);
+		if($answerId < 1) return;
+		
+		/** @var QnaComment $answer */
+		$answer = QnaComment::model()->findByPk($answerId);
+		
+		if($answer === null)
+			return;
+		
+		$canUserMarkQuestion = Yii::app()->user->is_admin || $answer->question->authorid === Yii::app()->user->id;
+		
+		if(!$canUserMarkQuestion) 
+			return;
+		
+		$previousCorrectAnswer = QnaComment::model()->findByAttributes  (
+				array('qid'=>$answer->qid , 'is_correct'=>true)
+		);
+		
+
+		if(null !== $previousCorrectAnswer)
+			$this->unmarkCorrectAnswer($previousCorrectAnswer);
+		
+		QnaComment::model()->updateByPk($answer->aid, array('is_correct' => true));
+		User::updatePointsBy($answer->author->id, + static::POINTS_FOR_CORRECT_ANSWER);
+		
+	}
+	
+	
+
+	private function unmarkCorrectAnswer(QnaComment $answer)
+	{
+		
+		QnaComment::model()->updateByPk($answer->aid, array('is_correct' => false));
+		User::updatePointsBy($answer->author->id, - static::POINTS_FOR_CORRECT_ANSWER);
+	}
+	
+	
     public function actionIndex()
     {
     	$this->pageTitle = 'שאלות ותשובות PHP | עזרה עם PHP | לימוד PHP';
@@ -114,8 +168,11 @@ class QnaController extends Controller
 	            $qna->save();
 	            static::addQnaToViewedList($qna);
 	    	}
-
-            $this->render('//qna/viewQna', array('qna' => &$qna));      
+	    
+			$canUserMarkAnswer = !Yii::app()->user->isGuest && 
+				( Yii::app()->user->is_admin || Yii::app()->user->id === $qna->author->id );
+			
+            $this->render('//qna/viewQna', array('qna' => &$qna, 'canUserMarkAnswer' => &$canUserMarkAnswer));      
             QnaController::removeQnaFromListOfNewAnswers($qna);
         }
         else
