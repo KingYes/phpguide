@@ -1,10 +1,10 @@
-<? if($qnas): ?>
+<?php if($qnas): ?>
 
 <h3 style="color: #BC1D35;">
     שאלות אחרונות
 </h3>
 
-    <?
+    <?php
         foreach($qnas as $qna)
         {
                 $this->renderPartial('//qna/qnaHomeItem', array('qna' => &$qna));
@@ -12,4 +12,4 @@
     ?>
     <div class='clear'></div>
 
-<? endif; ?>
+<?php endif; ?>
